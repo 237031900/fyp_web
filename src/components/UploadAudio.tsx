@@ -12,6 +12,9 @@ import {
   Upload,
   UploadProps,
   notification,
+  Space,
+  Grid,
+  Spin,
 } from "antd";
 import _ from "lodash";
 import axios from "axios";
@@ -51,9 +54,11 @@ const UploadAudio = () => {
   const [files, setFiles] = useState<TFile>({});
   const [output, setOutput] = useState({});
   const [currentAudio, setCurrentAudio] = useState(null);
-  const [modelSelect, setModelSelect] = useState();
+  const [modelSelected, setModelSelected] = useState({});
+  const [isConverting, setIsConverting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const handleUpload = ({ file }) => {
-    console.log(">>>>>>>>>>>>>>>>>>>>>>", file);
+    setIsUploading(true);
     const getFileObject = (progress) => {
       return {
         name: file.name,
@@ -95,7 +100,8 @@ const UploadAudio = () => {
       })
       .catch((err) => {
         openNotification("error", "bottomRight", err.message, err.code);
-      });
+      })
+      .finally(() => setIsUploading(false));
   };
 
   const handleRemove = (uid) => {
@@ -106,8 +112,8 @@ const UploadAudio = () => {
     });
   };
   useEffect(() => {
-    console.log(files);
-  }, [files]);
+    console.log("$$$$$$", modelSelected);
+  }, [modelSelected]);
 
   const props: UploadProps = {
     showUploadList: false,
@@ -118,7 +124,12 @@ const UploadAudio = () => {
   };
 
   const handleModelSelect = (id) => {
-    const newConvert = _.differenceBy(Object.keys(files), Object.keys(output));
+    setIsConverting(true);
+    const convertedList = [id] in modelSelected ? modelSelected[id] : {};
+    const newConvert = _.differenceBy(
+      Object.keys(files),
+      Object.keys(convertedList)
+    );
     if (newConvert.length > 0) {
       newConvert.map((uid) => {
         convert(id, uid, files[uid].name, files[uid].path);
@@ -148,13 +159,24 @@ const UploadAudio = () => {
             name,
             path,
           };
-          setOutput((prev) => {
-            return { ...prev, [uid]: audio };
+          // setOutput((prev) => {
+          //   return { ...prev, [uid]: audio };
+          // });
+          setModelSelected((prev) => {
+            return {
+              ...prev,
+              [id]: prev[id]
+                ? [...prev[id], { [uid]: audio }]
+                : [{ [uid]: audio }],
+            };
           });
         }
       })
       .catch((err) => {
         openNotification("error", "bottomRight", err.message, err.code);
+      })
+      .finally(() => {
+        setIsConverting(false);
       });
   };
 
@@ -186,115 +208,153 @@ const UploadAudio = () => {
   };
 
   return (
-    <Flex gap={24} vertical>
+    <Flex gap={24} vertical style={{ flex: 1 }}>
       {contextHolder}
-      {modelSelect}
-      <Flex vertical>
-        <Title style={{ color: "#14336F" }}>Upload songs</Title>
-        <Paragraph>
-          upload up to{" "}
-          <Text strong italic>
-            five
-          </Text>{" "}
-          songs to start
-        </Paragraph>
-      </Flex>
+      <Spin spinning={isConverting} />
+      <Flex vertical gap={24} style={{ padding: 24 }}>
+        <Flex vertical>
+          <Title style={{ color: "#14336F" }}>Upload songs</Title>
+          <Paragraph>
+            upload up to{" "}
+            <Text strong italic>
+              five
+            </Text>{" "}
+            songs to start
+          </Paragraph>
+        </Flex>
 
-      <Flex gap={32} align="flex-end">
-        <Upload {...props}>
-          <Button
-            icon={<UploadOutlined />}
-            disabled={Object.keys(files).length > 4}
-            style={{ backgroundColor: "#14336F", color: "white" }}
-          >
-            Browse
-          </Button>
-        </Upload>
-        {Object.keys(files).length > 4 && (
-          <Text code>You’ve reached the limit!</Text>
-        )}
-      </Flex>
-      <Flex wrap gap={24} justify="space-between">
-        {Object.values(files).map((file, index) => {
-          return (
-            <Flex
-              key={index}
-              vertical
-              gap={12}
-              align="center"
+        <Flex gap={8} align="flex-end">
+          <Upload {...props}>
+            <Button
+              icon={<UploadOutlined />}
+              loading={isUploading}
+              disabled={Object.keys(files).length > 4}
               style={{
-                boxShadow: "rgb(196 191 182) 8px 8px 20px 0px",
-                backgroundColor: "rgba(0,0,0,0.05)",
-                padding: 8,
-                borderRadius: 8,
+                backgroundColor: "#14336F",
+                color: "white",
+                opacity: Object.keys(files).length > 4 ? 0.5 : 1,
               }}
             >
+              Browse
+            </Button>
+          </Upload>
+          {Object.keys(files).length > 4 && (
+            <Text code>You’ve reached the limit!</Text>
+          )}
+        </Flex>
+        <Flex wrap gap={24}>
+          {Object.values(files).map((file, index) => {
+            return (
               <Flex
-                gap={8}
-                style={{ width: "100%", justifyContent: "space-between" }}
+                key={index}
+                vertical
+                gap={12}
+                align="center"
+                style={{
+                  boxShadow: "rgb(196 191 182) 8px 8px 20px 0px",
+                  backgroundColor: "rgba(0,0,0,0.05)",
+                  padding: 8,
+                  borderRadius: 8,
+                }}
               >
-                <Progress
-                  type="circle"
-                  size={21}
-                  percent={Math.ceil(file.progress * 100)}
-                />
-                <Flex gap={8} align="center">
-                  <CustomerServiceTwoTone twoToneColor="#14336F" />
-                  <text style={{ fontFamily: "monospace" }}>{file.name}</text>
-                  <DeleteOutlined
-                    onClick={() => handleRemove(file.uid)}
-                    style={{ flexShrink: 0 }}
+                <Flex
+                  gap={8}
+                  style={{ width: "100%", justifyContent: "space-between" }}
+                >
+                  <Progress
+                    type="circle"
+                    size={21}
+                    percent={Math.ceil(file.progress * 100)}
+                  />
+                  <Flex gap={8} align="center">
+                    <CustomerServiceTwoTone twoToneColor="#14336F" />
+                    <Text>{file.name}</Text>
+                    <DeleteOutlined
+                      onClick={() => handleRemove(file.uid)}
+                      style={{ flexShrink: 0 }}
+                    />
+                  </Flex>
+                </Flex>
+
+                <audio controls onPlay={handlePlay}>
+                  <source src={file.blob} type="audio/wav" />
+                  Your browser does not support the audio element.
+                </audio>
+              </Flex>
+            );
+          })}
+        </Flex>
+      </Flex>
+
+      <Flex vertical style={{ flex: 1 }}>
+        <Spin spinning={Object.keys(files).length < 1} indicator={<Space />}>
+          <Flex vertical gap={24} style={{ padding: 24 }}>
+            <Flex vertical>
+              <Title style={{ color: "#14336F" }}>Select singer</Title>
+              <Paragraph>Select a target singer</Paragraph>
+            </Flex>
+            <Flex wrap="wrap" gap="middle">
+              {modelList.map(({ id, name, path }) => (
+                <Flex key={id} vertical gap={8}>
+                  <Text italic strong>
+                    {name}
+                  </Text>
+                  <Image
+                    width={200}
+                    height={200}
+                    src={path}
+                    preview={false}
+                    onClick={() => handleModelSelect(id)}
+                    style={{
+                      borderRadius: "8px",
+                      border: "solid 2px",
+                      borderImage: "linear-gradient(#f6b73c, #4d9f0c) 30",
+                      cursor: "pointer",
+                    }}
                   />
                 </Flex>
-              </Flex>
-
-              <audio controls onPlay={handlePlay}>
-                <source src={file.blob} type="audio/wav" />
-                Your browser does not support the audio element.
-              </audio>
+              ))}
             </Flex>
-          );
-        })}
-
-        <Flex vertical gap={24}>
-          <Flex vertical>
-            <Title style={{ color: "#14336F" }}>Select singer</Title>
-            <Paragraph>Select a target singer</Paragraph>
-          </Flex>
-          <Flex wrap="wrap" gap="middle">
-            {modelList.map(({ id, name, path }) => (
-              <Flex key={id} vertical gap={8}>
-                {modelSelect}
-                {id}
-                <Text italic strong>
-                  {name}
-                </Text>
+            {Object.keys(modelSelected).map((file, index) => (
+              <Flex key={index} gap={16} align="center">
                 <Image
-                  width={200}
-                  height={200}
-                  src={path}
+                  width={50}
+                  height={50}
+                  src={modelList[file].path}
                   preview={false}
-                  onClick={() => handleModelSelect(id)}
                   style={{
                     borderRadius: "8px",
                     border: "solid 2px",
                     borderImage: "linear-gradient(#f6b73c, #4d9f0c) 30",
-                    cursor: "pointer",
                   }}
                 />
+                <Flex wrap gap={8}>
+                  {modelSelected[file].map((songs) => {
+                    return Object.values(songs).map((song, index) => (
+                      <Flex key={index} vertical gap={8}>
+                        <Text>{song.name}</Text>
+                        <audio
+                          controls
+                          style={{ width: "250px", height: "40px" }}
+                        >
+                          <source src={song.path} type="audio/wav" />
+                          Your browser does not support the audio element.
+                        </audio>
+                      </Flex>
+                    ));
+                  })}
+                </Flex>
               </Flex>
             ))}
           </Flex>
-          {Object.values(output).map((file, index) => (
-            <Flex key={index} vertical gap={8}>
-              <text style={{ fontFamily: "monospace" }}>{file.name}</text>
-              <audio controls onPlay={handlePlay}>
-                <source src={file.path} type="audio/wav" />
-                Your browser does not support the audio element.
-              </audio>
+          <Flex vertical gap={24} style={{ padding: 24 }}>
+            <Flex vertical>
+              <Title style={{ color: "#14336F" }}>Song classification</Title>
+              <Paragraph>Know your type</Paragraph>
             </Flex>
-          ))}
-        </Flex>
+            
+          </Flex>
+        </Spin>
       </Flex>
     </Flex>
   );

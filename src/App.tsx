@@ -21,19 +21,15 @@ function App() {
           }}
         >
           <TikTokOutlined
-            rotate={20}
+            rotate={240}
             style={{ fontSize: 50, color: "white" }}
           />
         </Header>
 
-        <Content
-          style={{
-            padding: 24,
-          }}
-        >
+        <Flex style={{flex: 1}}>
           <UploadAudio />
           <FloatButton.BackTop />
-        </Content>
+        </Flex>
         <Footer
           style={{
             backgroundColor: "#86bd8c",

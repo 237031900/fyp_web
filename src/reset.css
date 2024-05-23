@@ -45,4 +45,8 @@
     isolation: isolate;
   }
 
+  audio::-webkit-media-controls-panel {
+    background: linear-gradient(#f6b73c10, #4d9f0c20);
+    
+  }
   
