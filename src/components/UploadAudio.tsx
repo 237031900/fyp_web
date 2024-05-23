@@ -1,6 +1,7 @@
 import {
   CustomerServiceTwoTone,
   DeleteOutlined,
+  SunOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
 import {
@@ -15,6 +16,7 @@ import {
   Space,
   Grid,
   Spin,
+  Descriptions,
 } from "antd";
 import _ from "lodash";
 import axios from "axios";
@@ -52,7 +54,7 @@ const { Title, Paragraph, Text } = Typography;
 const UploadAudio = () => {
   const [noticeApi, contextHolder] = notification.useNotification();
   const [files, setFiles] = useState<TFile>({});
-  const [output, setOutput] = useState({});
+  const [classified, setClassified] = useState<>({});
   const [currentAudio, setCurrentAudio] = useState(null);
   const [modelSelected, setModelSelected] = useState({});
   const [isConverting, setIsConverting] = useState(false);
@@ -111,9 +113,6 @@ const UploadAudio = () => {
       return newFiles;
     });
   };
-  useEffect(() => {
-    console.log("$$$$$$", modelSelected);
-  }, [modelSelected]);
 
   const props: UploadProps = {
     showUploadList: false,
@@ -124,13 +123,13 @@ const UploadAudio = () => {
   };
 
   const handleModelSelect = (id) => {
-    setIsConverting(true);
     const convertedList = [id] in modelSelected ? modelSelected[id] : {};
     const newConvert = _.differenceBy(
       Object.keys(files),
       Object.keys(convertedList)
     );
     if (newConvert.length > 0) {
+      setIsConverting(true);
       newConvert.map((uid) => {
         convert(id, uid, files[uid].name, files[uid].path);
       });
@@ -179,7 +178,54 @@ const UploadAudio = () => {
         setIsConverting(false);
       });
   };
+  const handleClassify = () => {
+    const newClassify = _.differenceBy(
+      Object.keys(files),
+      Object.keys(classified)
+    );
+    if (newClassify.length > 0) {
+      setIsConverting(true);
+      newClassify.map((uid) => {
+        classify(uid, files[uid].name, files[uid].path);
+      });
+    }
+  };
 
+  const classify = (uid, name, path) => {
+    axios
+      .post(
+        "http://127.0.0.1:1147/classify",
+        {
+          audio_path: path,
+        },
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      )
+      .then((res) => {
+        if (res.data) {
+          const result = _.sortBy(_.toPairs(res.data), ([, value]) => -value);
+          setClassified((prev) => {
+            return {
+              ...prev,
+              [uid]: {
+                name,
+                path,
+                result,
+              },
+            };
+          });
+        }
+      })
+      .catch((err) => {
+        openNotification("error", "bottomRight", err.message, err.code);
+      })
+      .finally(() => {
+        setIsConverting(false);
+      });
+  };
   const openNotification = (
     type: NotificationType,
     placement: NotificationPlacement,
@@ -210,7 +256,7 @@ const UploadAudio = () => {
   return (
     <Flex gap={24} vertical style={{ flex: 1 }}>
       {contextHolder}
-      <Spin spinning={isConverting} />
+      <Spin spinning={isConverting} fullscreen />
       <Flex vertical gap={24} style={{ padding: 24 }}>
         <Flex vertical>
           <Title style={{ color: "#14336F" }}>Upload songs</Title>
@@ -287,7 +333,8 @@ const UploadAudio = () => {
       </Flex>
 
       <Flex vertical style={{ flex: 1 }}>
-        <Spin spinning={Object.keys(files).length < 1} indicator={<Space />}>
+        {/* Object.keys(files).length < 1 */}
+        <Spin spinning={false} indicator={<Space />}>
           <Flex vertical gap={24} style={{ padding: 24 }}>
             <Flex vertical>
               <Title style={{ color: "#14336F" }}>Select singer</Title>
@@ -352,7 +399,29 @@ const UploadAudio = () => {
               <Title style={{ color: "#14336F" }}>Song classification</Title>
               <Paragraph>Know your type</Paragraph>
             </Flex>
-            
+            <Button onClick={handleClassify}>Get your music type!</Button>
+            <Flex vertical gap={8}>
+              {Object.values(classified).map((data, index) => (
+                <Flex gap={8} key={index} vertical>
+                  <Text>{data.name}</Text>
+                  {data.result.map((number, index) => (
+                    <Flex gap={8} key={index}>
+                      <Paragraph
+                        strong={index === 0}
+                        italic={index === 0}
+                        style={{ width: "70px", textTransform: "capitalize" }}
+                      >
+                        {number[0]}
+                      </Paragraph>
+                      <Progress
+                        percent={Math.ceil(number[1] * 100)}
+                        size={[250, 6]}
+                      />
+                    </Flex>
+                  ))}
+                </Flex>
+              ))}
+            </Flex>
           </Flex>
         </Spin>
       </Flex>
