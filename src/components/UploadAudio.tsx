@@ -1,6 +1,7 @@
 import {
   CustomerServiceTwoTone,
   DeleteOutlined,
+  RadarChartOutlined,
   SunOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
@@ -333,8 +334,7 @@ const UploadAudio = () => {
       </Flex>
 
       <Flex vertical style={{ flex: 1 }}>
-        {/* Object.keys(files).length < 1 */}
-        <Spin spinning={false} indicator={<Space />}>
+        <Spin spinning={Object.keys(files).length < 1} indicator={<Space />}>
           <Flex vertical gap={24} style={{ padding: 24 }}>
             <Flex vertical>
               <Title style={{ color: "#14336F" }}>Select singer</Title>
@@ -399,7 +399,19 @@ const UploadAudio = () => {
               <Title style={{ color: "#14336F" }}>Song classification</Title>
               <Paragraph>Know your type</Paragraph>
             </Flex>
-            <Button onClick={handleClassify}>Get your music type!</Button>
+            <Button
+              icon={<RadarChartOutlined />}
+              loading={isUploading}
+              disabled={Object.keys(files).length > 4}
+              style={{
+                backgroundColor: "#14336F",
+                color: "white",
+                opacity: Object.keys(files).length > 4 ? 0.5 : 1,
+              }}
+              onClick={handleClassify}
+            >
+              Get your music type!
+            </Button>
             <Flex vertical gap={8}>
               {Object.values(classified).map((data, index) => (
                 <Flex gap={8} key={index} vertical>
