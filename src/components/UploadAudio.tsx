@@ -123,7 +123,7 @@ const UploadAudio = () => {
     customRequest: handleUpload,
   };
 
-  const handleModelSelect = (id) => {
+  const handleModelSelect = async (id) => {
     const convertedList = [id] in modelSelected ? modelSelected[id] : {};
     const newConvert = _.differenceBy(
       Object.keys(files),
@@ -131,9 +131,10 @@ const UploadAudio = () => {
     );
     if (newConvert.length > 0) {
       setIsConverting(true);
-      newConvert.map((uid) => {
-        convert(id, uid, files[uid].name, files[uid].path);
-      });
+
+      for (const uid of newConvert) {
+        await convert(id, uid, files[uid].name, files[uid].path);
+      }
     }
   };
   const convert = (id, uid, name, path) => {
@@ -179,16 +180,16 @@ const UploadAudio = () => {
         setIsConverting(false);
       });
   };
-  const handleClassify = () => {
+  const handleClassify = async () => {
     const newClassify = _.differenceBy(
       Object.keys(files),
       Object.keys(classified)
     );
     if (newClassify.length > 0) {
       setIsConverting(true);
-      newClassify.map((uid) => {
-        classify(uid, files[uid].name, files[uid].path);
-      });
+      for (const uid of newClassify) {
+        await classify(uid, files[uid].name, files[uid].path);
+      }
     }
   };
 
